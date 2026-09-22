@@ -235,7 +235,7 @@ func (e *Engine) ApplyConfig(_ context.Context, r *pluginv1.ApplyConfigRequest) 
 	// keyed by fingerprint and expire naturally; switching configuration cannot use them.
 	for k, t := range e.tickets {
 		a, ok := findAccount(c, t.AccountID)
-		if !ok || !contains(a.Models, t.Model) || t.ConfigFingerprint != configFingerprint(c, a, t.Model) {
+		if !ok || !contains(effectiveModels(c, a), t.Model) || t.ConfigFingerprint != configFingerprint(c, a, t.Model) {
 			delete(e.tickets, k)
 		}
 	}
@@ -330,13 +330,14 @@ func (e *Engine) ticketForRequest(_ context.Context, start *pluginv1.ForwardRequ
 	if !e.config.Enabled || !ok || !a.Enabled {
 		return nil, nil
 	}
+	model = effectiveModel(e.config, model)
 	if model == "" {
 		if e.config.AllowWithoutTicket {
 			return nil, nil
 		}
 		return nil, errors.New("configured account request has no inspectable model")
 	}
-	if !contains(a.Models, model) {
+	if !contains(effectiveModels(e.config, a), model) {
 		return nil, nil
 	}
 	k := keyFor(start.AccountId, model)
@@ -439,7 +440,7 @@ func (e *Engine) snapshotLocked(now time.Time) statusSnapshot {
 		s.Message = e.directoryError
 	}
 	for _, a := range e.config.Accounts {
-		for _, model := range a.Models {
+		for _, model := range effectiveModels(e.config, a) {
 			k := keyFor(a.AccountID, model)
 			t := e.tickets[k]
 			r := e.records[k]

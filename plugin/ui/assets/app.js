@@ -5,7 +5,7 @@
   else api.start(global);
 })(typeof window === 'object' ? window : null, function () {
   'use strict';
-  const DEFAULT_CONFIG = Object.freeze({ enabled: false, auto_harvest: true, business_use_front: false, allow_without_ticket: true, dynamic_proxy_url: '', harvest_dial_proxy_url: '', harvest_dial_proxy_mode: 'direct', harvest_dial_proxy_id: 0, observe_exit_ip: false, ttl_minutes: 60,
+  const DEFAULT_CONFIG = Object.freeze({ force_model: '', enabled: false, auto_harvest: true, business_use_front: false, allow_without_ticket: true, dynamic_proxy_url: '', harvest_dial_proxy_url: '', harvest_dial_proxy_mode: 'direct', harvest_dial_proxy_id: 0, observe_exit_ip: false, ttl_minutes: 60,
     refresh_before_minutes: 10, max_attempts: 8, attempt_interval_seconds: 10, cooldown_seconds: 300 });
   const NUMBERS = Object.freeze({ ttl_minutes: [1, 60, '票据有效期'], refresh_before_minutes: [0, 59, '提前续期'],
     max_attempts: [1, 32, '每轮最多尝试'], attempt_interval_seconds: [1, 300, '尝试间隔'], cooldown_seconds: [30, 3600, '失败后冷却'] });
@@ -52,6 +52,7 @@
     if (typeof config.business_use_front !== 'boolean') throw new Error('业务前置代理开关格式不正确。');
     if (typeof config.auto_harvest !== 'boolean') throw new Error('自动守护开关格式不正确。');
     if (typeof config.enabled !== 'boolean') throw new Error('总开关格式不正确。');
+    if (typeof config.force_model !== 'string' || (config.force_model && !MODEL_PATTERN.test(config.force_model))) throw new Error('强制模型格式不正确。');
     if (typeof config.observe_exit_ip !== 'boolean') throw new Error('出口 IP 检测开关格式不正确。');
     if (typeof config.harvest_dial_proxy_url !== 'string') throw new Error('前置代理地址格式不正确。');
     if (/[{}]/.test(config.harvest_dial_proxy_url)) throw new Error('前置代理不能使用会话占位符。');
@@ -356,6 +357,7 @@
     }
     function applyConfig(input) {
       const config = normalizeConfig(input);
+      byID('force-astra').checked = config.force_model === 'gpt-6-astra';
       byID('enabled').checked = config.enabled === true;
       byID('auto-harvest').checked=config.auto_harvest;
       byID('business-use-front').checked=config.business_use_front;
@@ -376,7 +378,7 @@
       updateSaveState();
     }
     function formConfig() {
-      const config = { enabled: byID('enabled').checked, auto_harvest:byID('auto-harvest').checked, business_use_front:byID('business-use-front').checked, allow_without_ticket: byID('allow-without-ticket').checked, dynamic_proxy_url: byID('dynamic-proxy-url').value.trim(), harvest_dial_proxy_mode: byID('harvest-dial-proxy-mode').value, harvest_dial_proxy_id: byID('harvest-dial-proxy-mode').value === 'managed' ? Number(byID('harvest-dial-proxy-id').value) : 0, harvest_dial_proxy_url: byID('harvest-dial-proxy-mode').value === 'manual' ? byID('harvest-dial-proxy-url').value.trim() : '', observe_exit_ip: byID('observe-exit-ip').checked };
+      const config = { force_model: byID('force-astra').checked ? 'gpt-6-astra' : '', enabled: byID('enabled').checked, auto_harvest:byID('auto-harvest').checked, business_use_front:byID('business-use-front').checked, allow_without_ticket: byID('allow-without-ticket').checked, dynamic_proxy_url: byID('dynamic-proxy-url').value.trim(), harvest_dial_proxy_mode: byID('harvest-dial-proxy-mode').value, harvest_dial_proxy_id: byID('harvest-dial-proxy-mode').value === 'managed' ? Number(byID('harvest-dial-proxy-id').value) : 0, harvest_dial_proxy_url: byID('harvest-dial-proxy-mode').value === 'manual' ? byID('harvest-dial-proxy-url').value.trim() : '', observe_exit_ip: byID('observe-exit-ip').checked };
       Object.keys(numberIDs).forEach(function (key) {
         const raw = byID(numberIDs[key]).value.trim();
         config[key] = raw === '' ? NaN : Number(raw);

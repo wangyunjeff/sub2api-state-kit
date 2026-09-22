@@ -160,7 +160,16 @@ func (e *Engine) Forward(stream pluginv1.TransportPlugin_ForwardServer) error {
 		if json.Unmarshal(data, &request) != nil || strings.TrimSpace(request.Model) == "" {
 			return sendUnavailable(stream, started)
 		}
-		model = request.Model
+		e.mu.Lock()
+		forceModel := e.config.ForceModel
+		e.mu.Unlock()
+		model = effectiveModel(Config{ForceModel: forceModel}, request.Model)
+		if forceModel != "" {
+			data, err = rewriteModelField(data, forceModel)
+			if err != nil {
+				return sendUnavailable(stream, started)
+			}
+		}
 		ticket, err = e.ticketForRequest(ctx, start, model)
 		if err != nil {
 			return sendUnavailable(stream, started)
@@ -287,6 +296,18 @@ func (e *Engine) Forward(stream pluginv1.TransportPlugin_ForwardServer) error {
 	return stream.Send(&pluginv1.ForwardResponse{Frame: &pluginv1.ForwardResponse_End{End: &pluginv1.ForwardResponseEnd{
 		BytesReceived: received, DurationMs: time.Since(started).Milliseconds(),
 	}}})
+}
+
+// rewriteModelField changes only the top-level JSON model field. The plugin
+// buffers enabled-account requests already, so this keeps the forced-model
+// behavior bounded to the same inspection path as STATE injection.
+func rewriteModelField(data []byte, model string) ([]byte, error) {
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, err
+	}
+	payload["model"], _ = json.Marshal(model)
+	return json.Marshal(payload)
 }
 
 func readConfiguredBody(ctx context.Context, stream pluginv1.TransportPlugin_ForwardServer, hasBody bool) ([]byte, error) {

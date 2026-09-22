@@ -20,6 +20,7 @@ const namespace = "state-kit-v1"
 
 // Config contains no OAuth credentials. The host owns credential refresh.
 type Config struct {
+	ForceModel             string          `json:"force_model"`
 	BusinessUseFront       bool            `json:"business_use_front"`
 	AutoHarvest            bool            `json:"auto_harvest"`
 	AllowWithoutTicket     bool            `json:"allow_without_ticket"`
@@ -47,6 +48,23 @@ func DefaultConfig() Config {
 	return Config{AutoHarvest: true, AllowWithoutTicket: true, TTLMinutes: 60, RefreshBeforeMinutes: 10, MaxAttempts: 8, AttemptIntervalSeconds: 10, CooldownSeconds: 300, Accounts: []AccountConfig{}}
 }
 
+// effectiveModels returns the models that the plugin should collect and serve.
+// A forced model replaces the account's requested model while preserving the
+// user's account/model configuration for easy rollback.
+func effectiveModels(c Config, a AccountConfig) []string {
+	if c.ForceModel != "" {
+		return []string{c.ForceModel}
+	}
+	return a.Models
+}
+
+func effectiveModel(c Config, requested string) string {
+	if c.ForceModel != "" {
+		return c.ForceModel
+	}
+	return requested
+}
+
 var modelPattern = regexp.MustCompile(`^gpt-[A-Za-z0-9][A-Za-z0-9._-]{0,94}$`)
 
 // ParseConfig rejects unknown fields, trailing JSON, and invalid ranges without
@@ -66,6 +84,9 @@ func ParseConfig(raw []byte) (Config, error) {
 	}
 	if err := dec.Decode(new(any)); err != io.EOF {
 		return c, errors.New("configuration has trailing JSON")
+	}
+	if c.ForceModel != "" && !modelPattern.MatchString(c.ForceModel) {
+		return c, errors.New("force_model must be a valid gpt model ID")
 	}
 	c.DynamicProxyURL = strings.TrimSpace(c.DynamicProxyURL)
 	c.HarvestDialProxyURL = strings.TrimSpace(c.HarvestDialProxyURL)
@@ -203,7 +224,7 @@ func configFingerprint(c Config, a AccountConfig, model string) string {
 	} else if frontProxyMode(c) == "manual" {
 		dynamicRoute = digest("chained-v1", dynamicRoute, c.HarvestDialProxyURL)
 	}
-	return digest("v1", dynamicRoute, a.Plan, model, jsonText(struct {
+	return digest("v2", dynamicRoute, c.ForceModel, a.Plan, model, jsonText(struct {
 		ID  int64
 		TTL int
 	}{a.AccountID, c.TTLMinutes}))

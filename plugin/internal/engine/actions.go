@@ -124,7 +124,7 @@ func (e *Engine) RunAction(_ context.Context, req *pluginv1.RunActionRequest) (*
 		}
 		for _, c := range targets {
 			accountStarted := false
-			for _, model := range c.Models {
+			for _, model := range effectiveModels(e.config, c) {
 				if e.startCollectLocked(c, model, true, trigger) {
 					accountStarted = true
 				}
@@ -285,6 +285,7 @@ func (e *Engine) runManual(ctx context.Context, cancel context.CancelFunc, a man
 		return
 	}
 	var ticket *receipt
+	requestModel := effectiveModel(c, a.Model)
 	if a.UseState {
 		ticket, err = e.ticketForRequest(ctx, &pluginv1.ForwardRequestStart{Platform: "openai", AccountType: "oauth", AccountId: a.AccountID, ProxyUrl: identity.ProxyUrl, Headers: identity.Headers}, a.Model)
 		if err != nil {
@@ -292,7 +293,7 @@ func (e *Engine) runManual(ctx context.Context, cancel context.CancelFunc, a man
 			return
 		}
 	}
-	payload := map[string]any{"model": a.Model, "store": false, "stream": true, "instructions": "Follow the user's request.", "input": []any{map[string]any{"role": "user", "content": []any{map[string]any{"type": "input_text", "text": a.Prompt}}}}}
+	payload := map[string]any{"model": requestModel, "store": false, "stream": true, "instructions": "Follow the user's request.", "input": []any{map[string]any{"role": "user", "content": []any{map[string]any{"type": "input_text", "text": a.Prompt}}}}}
 	body, _ := json.Marshal(payload)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.probeURL, bytes.NewReader(body))
 	if err != nil {
@@ -341,7 +342,7 @@ func (e *Engine) runManual(ctx context.Context, cancel context.CancelFunc, a man
 		}
 		return
 	}
-	obs := newCompletionObserver(a.Model)
+	obs := newCompletionObserver(requestModel)
 	text := ""
 	upstreamFailure := ""
 	safe := func(s string) string {

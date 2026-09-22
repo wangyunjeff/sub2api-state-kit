@@ -34,6 +34,27 @@ func testHost(ids ...int64) *fakeHost {
 	}
 	return h
 }
+
+func TestForceModelConfigAndRewrite(t *testing.T) {
+	c, err := ParseConfig([]byte(`{"force_model":"gpt-6-astra","accounts":[{"account_id":1,"models":["gpt-5.6-luna"]}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := effectiveModels(c, c.Accounts[0]); len(got) != 1 || got[0] != "gpt-6-astra" {
+		t.Fatalf("effective models = %#v", got)
+	}
+	data, err := rewriteModelField([]byte(`{"model":"gpt-5.6-luna","input":[]}`), "gpt-6-astra")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload["model"] != "gpt-6-astra" {
+		t.Fatalf("rewritten model = %#v", payload["model"])
+	}
+}
 func (h *fakeHost) KVGet(_ context.Context, r *pluginv1.KVGetRequest, _ ...grpc.CallOption) (*pluginv1.KVGetResponse, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

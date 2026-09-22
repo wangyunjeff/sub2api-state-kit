@@ -85,7 +85,7 @@ func (e *Engine) schedule() {
 		if !a.Enabled || !e.directory[a.AccountID] {
 			continue
 		}
-		for _, model := range a.Models {
+		for _, model := range effectiveModels(e.config, a) {
 			k := keyFor(a.AccountID, model)
 			if _, running := e.jobs[k]; running {
 				continue

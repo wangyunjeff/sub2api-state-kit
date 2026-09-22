@@ -14,6 +14,8 @@
 <div><label for="dynamic-proxy-url">动态池地址</label><div class="input-action"><input id="dynamic-proxy-url" type="password" autocomplete="off" spellcheck="false" placeholder="粘贴动态代理地址"><button id="toggle-proxy" type="button" class="secondary" aria-pressed="false">显示</button></div><p class="help">支持 HTTP / SOCKS5；用 {sid} 或 {random} 轮换会话。</p></div></div>
 <label class="switch-label wrap"><input id="business-use-front" type="checkbox"><span>固定业务代理也经过此前置代理 <span class="muted">· 国内部署建议开启</span></span></label>
 <p class="help">找票据走动态池，使用票据走账号固定出口。此开关点击「保存设置」生效。</p>
+<label class="switch-label wrap"><input id="force-astra" type="checkbox"><span>强制使用 Astra <span class="muted">· 将插件账号请求的模型改为 gpt-6-astra</span></span></label>
+<p class="help">开启后，采集、票据和转发统一按 gpt-6-astra 处理；关闭后恢复客户端原模型。</p>
 <div class="actions network-action"><button id="proxy-test" type="button" disabled>测试并应用代理</button><span class="help">测试动态出口；通过后自动保存，并短时保留测通会话。</span></div>
 <p id="proxy-test-status" class="proxy-result" role="status" aria-live="polite">先测试动态出口，再查找票据；账号授权和上游可用性在查找时验证。</p>
 <details class="inline-details"><summary>连接说明</summary><p class="help">国内部署：本机 → 前置代理（如 Clash）→ 动态池 / 固定代理 → 上游。前置代理仅是中转，最终出口由后一级代理决定。固定业务代理共用前置代理仅作用于下方列表内账号；本机回环代理桥保持原路径。容器内的 127.0.0.1 指向容器自身。</p></details>

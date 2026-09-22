@@ -10,6 +10,7 @@ Sub2API v0.2.7 的开源 OpenAI OAuth transport 插件，提供逐账号 Pro / T
 - 宿主源码基线：官方 `v0.2.7`，提交 `aea725f2ea644d5592d0bbb1d63b607efa7e200a`
 - 当前部署范围：单应用实例
 - 默认：所有 STATE 开关关闭，不含任何真实账号或代理配置
+- 可选：在配置页开启“强制使用 Astra”，将插件账号的上游模型统一改为 `gpt-6-astra`
 
 ## 开发
 
